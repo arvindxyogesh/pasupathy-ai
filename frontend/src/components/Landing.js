@@ -1,0 +1,87 @@
+import React from 'react';
+import { Bot, Sparkles, Brain, ArrowRight, AlertCircle, CheckCircle, Zap } from 'lucide-react';
+import '../styles/Landing.css';
+
+const Landing = ({ onEnter, healthStatus }) => {
+  return (
+    <div className="landing-page">
+      <div className="landing-container">
+        <div className="hero-section">
+          <div className="hero-icon">
+            <Sparkles size={80} className="sparkles-icon" />
+          </div>
+          <h1>Pasupathy</h1>
+          <p className="hero-subtitle">
+            Arvind's AI Assistant – Your Personal Knowledge Companion
+          </p>
+          
+          <div className="features-grid">
+            <div className="feature">
+              <Brain className="feature-icon" />
+              <h3>Intelligent Insights</h3>
+              <p>Get smart answers about Arvind from curated personal data</p>
+            </div>
+            <div className="feature">
+              <Zap className="feature-icon" />
+              <h3>Instant Responses</h3>
+              <p>Lightning-fast retrieval using advanced RAG technology</p>
+            </div>
+            <div className="feature">
+              <Bot className="feature-icon" />
+              <h3>AI-Powered</h3>
+              <p>Powered by Google Gemini for intelligent conversations</p>
+            </div>
+          </div>
+
+          <div className="system-status">
+            <h3>System Status</h3>
+            <div className="status-items">
+              <div className={`status-item ${healthStatus?.status === 'ready' ? 'ready' : healthStatus?.status === 'initializing' ? 'initializing' : 'error'}`}>
+                {healthStatus?.status === 'ready' ? (
+                  <CheckCircle size={20} className="ready" />
+                ) : (
+                  <AlertCircle size={20} className={healthStatus?.status === 'initializing' ? 'initializing' : 'error'} />
+                )}
+                <span>API: {healthStatus?.status || 'Checking...'}</span>
+              </div>
+              <div className={`status-item ${healthStatus?.database === 'connected' ? 'ready' : 'error'}`}>
+                {healthStatus?.database === 'connected' ? (
+                  <CheckCircle size={20} className="ready" />
+                ) : (
+                  <AlertCircle size={20} className="error" />
+                )}
+                <span>Database: {healthStatus?.database || 'Unknown'}</span>
+              </div>
+              <div className={`status-item ${healthStatus?.model_status === 'ready' ? 'ready' : healthStatus?.model_status === 'initializing' ? 'initializing' : 'error'}`}>
+                {healthStatus?.model_status === 'ready' ? (
+                  <CheckCircle size={20} className="ready" />
+                ) : (
+                  <AlertCircle size={20} className={healthStatus?.model_status === 'initializing' ? 'initializing' : 'error'} />
+                )}
+                <span>Model: {healthStatus?.model_status === 'ready' ? 'Ready' : healthStatus?.model_message || 'Initializing'}</span>
+              </div>
+            </div>
+          </div>
+
+          <button 
+            onClick={onEnter} 
+            className="enter-btn"
+            disabled={healthStatus?.model_status !== 'ready'}
+          >
+            Start Conversation
+            <ArrowRight size={20} />
+          </button>
+
+          {healthStatus?.error && (
+            <div className="error-message">
+              <AlertCircle size={16} />
+              <span>Initialization Error: {healthStatus.error}</span>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default Landing;
