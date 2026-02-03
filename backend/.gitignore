@@ -26,4 +26,5 @@ Thumbs.db
 *.log
 
 # FAISS Index (large files - regenerated on first run)
-faiss_index/
+faiss_index/*.faiss
+faiss_index/*.pkl
