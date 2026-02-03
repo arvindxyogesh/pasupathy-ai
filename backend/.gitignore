@@ -24,3 +24,6 @@ Thumbs.db
 
 # Logs
 *.log
+
+# FAISS Index (large files - regenerated on first run)
+faiss_index/
