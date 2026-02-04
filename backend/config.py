@@ -30,11 +30,11 @@ else:
 
 # LLM Configuration
 EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
-GEMINI_MODELS = ["gemini-2.5-flash", "gemini-1.5-flash", "gemini-1.5-pro", "gemini-pro"]
-TEMPERATURE = 0.0  # Deterministic responses
+GEMINI_MODEL = "gemini-2.5-flash"  # Free tier model (1.5M requests/month)
+TEMPERATURE = 0.7  # Creative responses
 
 # RAG Configuration
-SEARCH_K = 3  # Number of documents to retrieve
+SEARCH_K = 15  # Number of documents to retrieve (increased for better coverage)
 CHUNK_SIZE = 1000  # Size of text chunks
 CHUNK_OVERLAP = 200  # Overlap between chunks
 MAX_CONTEXT_MESSAGES = 6  # For conversation history

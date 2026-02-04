@@ -229,10 +229,28 @@ def chat():
         if stream:
             def generate():
                 try:
-                    # Use RAG chain to get response
-                    response_text = llm_chain["chain"].invoke(full_query)
-                    # Get source documents separately
-                    source_docs = llm_chain["retriever"].get_relevant_documents(full_query)
+                    # Use Gemini client
+                    gemini_model = llm_chain["gemini_model"]
+                    retriever = llm_chain["retriever"]
+                    
+                    # Get relevant context
+                    source_docs = retriever.get_relevant_documents(full_query)
+                    context = "\n\n".join([f"Context {i+1}:\n{doc.page_content}" 
+                                          for i, doc in enumerate(source_docs)])
+                    
+                    # Create prompt for Gemini
+                    prompt = f"""You are Pasupathy, Arvind's personal AI assistant. Answer questions about Arvind based on the context provided. Be conversational, helpful, and synthesize information from multiple context pieces when relevant. If the exact answer isn't in the context but related information is available, provide what you know and indicate what's available.
+
+Context:
+{context}
+
+Question: {full_query}
+
+Answer:"""
+                    
+                    # Call Gemini
+                    response = gemini_model.generate_content(prompt)
+                    response_text = response.text
                     
                     # Stream the response word by word for better UX
                     words = response_text.split()
@@ -259,10 +277,34 @@ def chat():
 
             return Response(stream_with_context(generate()), mimetype='text/event-stream')
         else:
-            # Use RAG chain with retrieval
-            bot_response = llm_chain["chain"].invoke(full_query)
-            # Get source documents separately
-            source_docs = llm_chain["retriever"].get_relevant_documents(full_query)
+            # Use Gemini client
+            gemini_model = llm_chain["gemini_model"]
+            retriever = llm_chain["retriever"]
+            
+            # Get relevant context
+            source_docs = retriever.get_relevant_documents(full_query)
+            
+            # Debug: Log retrieved context
+            logging.info(f"📚 Retrieved {len(source_docs)} documents for query: {full_query}")
+            for i, doc in enumerate(source_docs[:3]):
+                logging.info(f"  Doc {i+1} preview: {doc.page_content[:150]}...")
+            
+            context = "\n\n".join([f"Context {i+1}:\n{doc.page_content}" 
+                                  for i, doc in enumerate(source_docs)])
+            
+            # Create prompt for Gemini
+            prompt = f"""You are Pasupathy, Arvind's personal AI assistant. Answer questions about Arvind based on the context provided. Be conversational, helpful, and synthesize information from multiple context pieces when relevant. If the exact answer isn't in the context but related information is available, provide what you know and indicate what's available.
+
+Context:
+{context}
+
+Question: {full_query}
+
+Answer:"""
+            
+            # Call Gemini
+            response = gemini_model.generate_content(prompt)
+            bot_response = response.text
             
             # Add assistant message
             session.add_message("assistant", bot_response)
@@ -542,9 +584,60 @@ def upload_dataset():
         # Parse JSON
         data = json.load(file)
         
+        # Handle new qa_pairs format
+        if isinstance(data, dict) and 'qa_pairs' in data:
+            logging.info("📋 Detected qa_pairs format, converting...")
+            metadata = data.get('metadata', {})
+            qa_pairs = data.get('qa_pairs', [])
+            
+            # Convert qa_pairs to flat documents
+            converted_data = []
+            for qa in qa_pairs:
+                doc = {
+                    'text': f"Question: {qa.get('prompt', '')}\n\nAnswer: {qa.get('answer', '')}",
+                    'question': qa.get('prompt', ''),
+                    'answer': qa.get('answer', ''),
+                    'source': metadata.get('source_filename', metadata.get('document_title', 'unknown')),
+                    'category': metadata.get('document_type', 'general'),
+                    'id': qa.get('id', '')
+                }
+                converted_data.append(doc)
+            data = converted_data
+            logging.info(f"✅ Converted {len(data)} qa_pairs to documents")
+        
         # Ensure data is a list
-        if isinstance(data, dict):
+        elif isinstance(data, dict):
+            # Check if it's the old nested format with metadata and qna_data
+            if 'qna_data' in data:
+                logging.warning("⚠️ Detected old nested format. Please use flat array format.")
+                return jsonify({
+                    "status": "error",
+                    "message": "Dataset must be a flat array of documents. Each document should have 'text', 'question', and 'answer' fields."
+                }), 400
             data = [data]
+        
+        # Validate dataset format
+        valid_count = 0
+        invalid_count = 0
+        for doc in data:
+            if not isinstance(doc, dict):
+                invalid_count += 1
+                continue
+            # Check for required fields
+            if not (doc.get('text') or doc.get('content')):
+                invalid_count += 1
+                logging.warning(f"⚠️ Document missing 'text' field: {doc.get('_id', 'unknown')}")
+            else:
+                valid_count += 1
+        
+        if invalid_count > 0:
+            logging.warning(f"⚠️ {invalid_count} invalid documents found, {valid_count} valid")
+        
+        if valid_count == 0:
+            return jsonify({
+                "status": "error",
+                "message": "No valid documents found. Each document must have 'text' or 'content' field."
+            }), 400
         
         # Insert into MongoDB
         result = dataset_collection.insert_many(data)
