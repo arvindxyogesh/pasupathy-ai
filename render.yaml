@@ -1,0 +1,25 @@
+services:
+  # Backend API Service
+  - type: web
+    name: pasupathy-backend
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    envVars:
+      - key: MONGO_URI
+        sync: false
+      - key: GOOGLE_API_KEY
+        sync: false
+      - key: SECRET_KEY
+        generateValue: true
+      - key: FLASK_ENV
+        value: production
+      - key: PORT
+        value: 5000
+    healthCheckPath: /api/health
+    autoDeploy: true
+
+databases:
+  # Note: Render's free tier doesn't include MongoDB
+  # You'll need to use MongoDB Atlas (free) instead
+  # Connect string format: mongodb+srv://<username>:<password>@cluster.mongodb.net/pasupathy_ai
