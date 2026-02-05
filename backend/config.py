@@ -34,7 +34,7 @@ GEMINI_MODEL = "gemini-2.5-flash"  # Free tier model (1.5M requests/month)
 TEMPERATURE = 0.7  # Creative responses
 
 # RAG Configuration
-SEARCH_K = 15  # Number of documents to retrieve (increased for better coverage)
+SEARCH_K = 25  # Number of documents to retrieve (increased for comprehensive coverage)
 CHUNK_SIZE = 1000  # Size of text chunks
 CHUNK_OVERLAP = 200  # Overlap between chunks
 MAX_CONTEXT_MESSAGES = 6  # For conversation history

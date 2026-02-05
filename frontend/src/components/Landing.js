@@ -7,6 +7,31 @@ const Landing = ({ onEnter, healthStatus }) => {
     <div className="landing-page">
       <div className="landing-container">
         <div className="hero-section">
+          {/* Profile Section */}
+          <div className="profile-section">
+            <div className="profile-image-container">
+              <img 
+                src="/profile.jpg" 
+                alt="Arvind" 
+                className="profile-image"
+                onError={(e) => {
+                  // Fallback to placeholder if image not found
+                  e.target.src = 'https://ui-avatars.com/api/?name=Arvind&size=200&background=7c3aed&color=fff&bold=true';
+                }}
+              />
+              <div className="profile-ring"></div>
+            </div>
+            <div className="profile-intro">
+              <h2 className="profile-name">Arvind</h2>
+              <p className="profile-tagline">Computer Vision Engineer | AI Enthusiast | Problem Solver</p>
+              <p className="profile-description">
+                Welcome! I'm Arvind, passionate about building intelligent systems that see and understand the world. 
+                Through Pasupathy, you can explore my journey in computer vision, machine learning, robotics, and more. 
+                Ask me anything about my projects, skills, experience, or research!
+              </p>
+            </div>
+          </div>
+
           <div className="hero-icon">
             <Sparkles size={80} className="sparkles-icon" />
           </div>
@@ -60,6 +85,12 @@ const Landing = ({ onEnter, healthStatus }) => {
                 )}
                 <span>Model: {healthStatus?.model_status === 'ready' ? 'Ready' : healthStatus?.model_message || 'Initializing'}</span>
               </div>
+              {healthStatus?.dataset_count !== undefined && (
+                <div className="status-item ready">
+                  <CheckCircle size={20} className="ready" />
+                  <span>Knowledge Base: {healthStatus.dataset_count.toLocaleString()} documents</span>
+                </div>
+              )}
             </div>
           </div>
 

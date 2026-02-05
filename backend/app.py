@@ -46,17 +46,33 @@ def rate_limit(f):
 mongo = PyMongo(app)
 
 # Import after mongo is initialized
-from llm_model import initialize_llm_model
+from llm_model import (
+    initialize_llm_model, 
+    get_retriever_context, 
+    add_user_contributions_to_vectorstore, 
+    rebuild_vectorstore_with_contributions,
+    _detect_query_context,
+    get_context_filtered_docs
+)
+from user_knowledge import UserKnowledgeManager
+
+# Initialize user knowledge manager
+user_knowledge_manager = None
 
 # Initialize LLM model in background thread
 llm_chain = None
 model_status = {"status": "initializing", "message": "Loading model and embeddings..."}
 
 def init_model_background():
-    global llm_chain, model_status
+    global llm_chain, model_status, user_knowledge_manager
     try:
         print("🚀 Starting LLM model initialization in background...")
         model_status = {"status": "initializing", "message": "Loading documents and building embeddings..."}
+        
+        # Initialize user knowledge manager
+        user_knowledge_manager = UserKnowledgeManager(mongo.db)
+        print("✅ User knowledge manager initialized")
+        
         llm_chain = initialize_llm_model(mongo.db)
         model_status = {"status": "ready", "message": "Model initialized successfully"}
         print("✅ Model initialized successfully!")
@@ -144,6 +160,58 @@ def save_chat_session(session):
         upsert=True
     )
 
+def generate_creative_title(user_message, bot_response, query_context=None):
+    """Generate a creative, contextual title for the chat session using LLM"""
+    try:
+        if not llm_chain or model_status["status"] != "ready":
+            # Fallback to simple title
+            return user_message[:40] + ("..." if len(user_message) > 40 else "")
+        
+        gemini_model = llm_chain.get("gemini_model")
+        if not gemini_model:
+            return user_message[:40] + ("..." if len(user_message) > 40 else "")
+        
+        # Create prompt for title generation
+        context_hint = f" (about {query_context.replace('_', ' ')})" if query_context else ""
+        
+        title_prompt = f"""Generate a short, creative title (3-5 words max) for this conversation{context_hint}.
+
+User Question: {user_message[:200]}
+Assistant Response: {bot_response[:200]}
+
+Requirements:
+- Maximum 5 words
+- Descriptive and contextual
+- Professional and clear
+- No quotes or punctuation
+- Capture the main topic/theme
+
+Examples:
+- "Computer Vision Projects"
+- "Education Background"
+- "Machine Learning Skills"
+- "Robotics Experience"
+
+Title:"""
+
+        response = gemini_model.generate_content(title_prompt)
+        title = response.text.strip()
+        
+        # Clean up the title
+        title = title.replace('"', '').replace("'", '').strip()
+        
+        # Ensure it's not too long
+        if len(title) > 50:
+            title = title[:47] + "..."
+        
+        logging.info(f"💡 Generated creative title: '{title}'")
+        return title
+        
+    except Exception as e:
+        logging.error(f"Error generating title: {str(e)}")
+        # Fallback to simple title
+        return user_message[:40] + ("..." if len(user_message) > 40 else "")
+
 # API Routes
 @app.route('/')
 def landing():
@@ -206,10 +274,6 @@ def chat():
         else:
             session = ChatSession()
 
-        # Set title from first message
-        if not session.messages:
-            session.title = user_message[:50] + ("..." if len(user_message) > 50 else "")
-
         # Add user message
         user_msg = session.add_message("user", user_message)
 
@@ -233,20 +297,54 @@ def chat():
                     gemini_model = llm_chain["gemini_model"]
                     retriever = llm_chain["retriever"]
                     
-                    # Get relevant context
-                    source_docs = retriever.get_relevant_documents(full_query)
+                    # Detect if this is a follow-up question
+                    follow_up_indicators = ['he', 'his', 'him', 'that', 'those', 'them', 'this', 'these', 'it', 'also', 'more', 'tell me more', 'what about', 'and']
+                    is_follow_up = any(word in user_message.lower().split()[:5] for word in follow_up_indicators)
+                    
+                    # Detect query context for focused retrieval
+                    conversation_text = [msg['content'] for msg in session.messages[-3:]]
+                    query_context = _detect_query_context(user_message, conversation_text)
+                    
+                    # Build conversation context if this seems like a follow-up
+                    conv_context = ""
+                    if is_follow_up and len(session.messages) > 1:
+                        recent_messages = session.messages[-4:]  # Last 2 Q&A pairs
+                        conv_context = "\n\nRecent Conversation (for context):\n"
+                        for msg in recent_messages:
+                            role = "User" if msg["role"] == "user" else "Pasupathy"
+                            conv_context += f"{role}: {msg['content'][:200]}...\n"
+                        conv_context += "\n"
+                    
+                    # Get context-aware relevant documents
+                    source_docs = get_context_filtered_docs(retriever, user_message, query_context, k=5)
+                    
+                    if query_context:
+                        logging.info(f"🎯 Context-aware query detected: {query_context}")
                     context = "\n\n".join([f"Context {i+1}:\n{doc.page_content}" 
                                           for i, doc in enumerate(source_docs)])
                     
-                    # Create prompt for Gemini
-                    prompt = f"""You are Pasupathy, Arvind's personal AI assistant. Answer questions about Arvind based on the context provided. Be conversational, helpful, and synthesize information from multiple context pieces when relevant. If the exact answer isn't in the context but related information is available, provide what you know and indicate what's available.
+                    # Create context-aware prompt for Gemini
+                    context_instruction = f"\n\n**IMPORTANT**: This question is specifically about Arvind's {query_context.replace('_', ' ')} work. ONLY provide information related to {query_context.replace('_', ' ')}. Do NOT mention unrelated projects, skills, or achievements unless explicitly asked." if query_context else ""
+                    
+                    prompt = f"""You are Pasupathy, Arvind's personal AI assistant. You know Arvind personally and answer questions about him naturally.
 
-Context:
+Instructions:
+1. Answer as if you simply know about Arvind - never mention "documents," "context," or "information provided"
+2. STAY FOCUSED on the current topic - don't list unrelated achievements or switch topics
+3. Use your creativity and reasoning to answer questions even when you're not completely certain
+4. Make educated inferences from what you know about Arvind
+5. When you're uncertain, use phrases like "As far as I know..." or "From what I understand..."
+6. If recent conversation is provided, use it to understand pronouns and references
+7. Provide detailed, thoughtful answers as a personal assistant would
+8. Be conversational and helpful
+9. NEVER say "I don't have information" or reveal your information sources{context_instruction}
+{conv_context}
+Context from Dataset:
 {context}
 
-Question: {full_query}
+Question: {user_message}
 
-Answer:"""
+Take your time to provide a thorough answer:"""
                     
                     # Call Gemini
                     response = gemini_model.generate_content(prompt)
@@ -265,6 +363,11 @@ Answer:"""
                         for doc in source_docs[:3]
                     ]
                     
+                    # Generate creative title for first message
+                    is_first_message = len(session.messages) == 2  # User + assistant
+                    if is_first_message:
+                        session.title = generate_creative_title(user_message, response_text, query_context)
+                    
                     chat_sessions_collection.update_one(
                         {"session_id": session.session_id},
                         {"$set": session.to_dict()},
@@ -281,26 +384,61 @@ Answer:"""
             gemini_model = llm_chain["gemini_model"]
             retriever = llm_chain["retriever"]
             
-            # Get relevant context
-            source_docs = retriever.get_relevant_documents(full_query)
+            # Detect if this is a follow-up question (uses pronouns or incomplete context)
+            follow_up_indicators = ['he', 'his', 'him', 'that', 'those', 'them', 'this', 'these', 'it', 'also', 'more', 'tell me more', 'what about', 'and']
+            is_follow_up = any(word in user_message.lower().split()[:5] for word in follow_up_indicators)  # Check first 5 words
+            
+            # Detect query context for focused retrieval
+            conversation_text = [msg['content'] for msg in session.messages[-3:]]
+            query_context = _detect_query_context(user_message, conversation_text)
+            
+            # Build conversation context if this seems like a follow-up
+            conv_context = ""
+            if is_follow_up and len(session.messages) > 1:
+                recent_messages = session.messages[-4:]  # Last 2 Q&A pairs
+                conv_context = "\n\nRecent Conversation (for context):\n"
+                for msg in recent_messages:
+                    role = "User" if msg["role"] == "user" else "Pasupathy"
+                    conv_context += f"{role}: {msg['content'][:200]}...\n"
+                conv_context += "\n"
+            
+            # Get context-aware relevant documents
+            source_docs = get_context_filtered_docs(retriever, user_message, query_context, k=5)
+            
+            if query_context:
+                logging.info(f"🎯 Context-aware query detected: {query_context}")
             
             # Debug: Log retrieved context
-            logging.info(f"📚 Retrieved {len(source_docs)} documents for query: {full_query}")
+            logging.info(f"📚 Retrieved {len(source_docs)} documents for query: {user_message} (follow_up: {is_follow_up}, context: {query_context or 'general'})")
             for i, doc in enumerate(source_docs[:3]):
                 logging.info(f"  Doc {i+1} preview: {doc.page_content[:150]}...")
             
             context = "\n\n".join([f"Context {i+1}:\n{doc.page_content}" 
                                   for i, doc in enumerate(source_docs)])
             
-            # Create prompt for Gemini
-            prompt = f"""You are Pasupathy, Arvind's personal AI assistant. Answer questions about Arvind based on the context provided. Be conversational, helpful, and synthesize information from multiple context pieces when relevant. If the exact answer isn't in the context but related information is available, provide what you know and indicate what's available.
+            # Create context-aware prompt for Gemini
+            context_instruction = f"\n\n**IMPORTANT**: This question is specifically about Arvind's {query_context.replace('_', ' ')} work. ONLY provide information related to {query_context.replace('_', ' ')}. Do NOT mention unrelated projects, skills, or achievements unless explicitly asked." if query_context else ""
+            
+            prompt = f"""You are Pasupathy, Arvind's personal AI assistant. You know Arvind personally and answer questions about him naturally.
 
-Context:
+Instructions:
+1. Answer as if you simply know about Arvind - never mention "documents," "context," or "information provided"
+2. STAY FOCUSED on the current topic - don't list unrelated achievements or switch topics
+3. Use your creativity and reasoning to answer questions even when you're not completely certain
+4. Make educated inferences from what you know about Arvind
+5. When you're uncertain, use phrases like "As far as I know..." or "From what I understand..."
+6. If recent conversation is provided, use it to understand pronouns and references
+7. Synthesize information naturally when relevant
+8. Provide detailed, thoughtful answers as a personal assistant would
+9. Be conversational and helpful
+10. NEVER say "I don't have information" or reveal your information sources{context_instruction}
+{conv_context}
+Context from Dataset:
 {context}
 
-Question: {full_query}
+Question: {user_message}
 
-Answer:"""
+Take your time to provide a thorough answer:"""
             
             # Call Gemini
             response = gemini_model.generate_content(prompt)
@@ -317,6 +455,11 @@ Answer:"""
                 }
                 for doc in source_docs[:3]
             ]
+            
+            # Generate creative title for first message
+            is_first_message = len(session.messages) == 2  # User + assistant
+            if is_first_message:
+                session.title = generate_creative_title(user_message, bot_response, query_context)
 
             # Save to database
             chat_sessions_collection.update_one(
@@ -324,6 +467,48 @@ Answer:"""
                 {"$set": session.to_dict()},
                 upsert=True
             )
+            
+            # Detect if user provided new information (corrections NOT allowed)
+            detected_info = False
+            detection_type = None
+            if user_knowledge_manager and llm_chain:
+                detected_info, detection_type = user_knowledge_manager.detect_new_information(user_message)
+                
+                if detected_info:
+                    # Auto-approve and immediately add to vector store (only NEW information)
+                    contribution_id = user_knowledge_manager.store_user_contribution(
+                        content=user_message,
+                        session_id=session.session_id,
+                        user_question=None,
+                        assistant_response=bot_response,
+                        detection_type=detection_type,
+                        category="general",
+                        auto_approve=True  # Auto-approve since corrections are blocked
+                    )
+                    
+                    if contribution_id:
+                        logging.info(f"📝 Detected NEW info: auto-approved and adding to knowledge base")
+                        
+                        # Immediately add to vector store
+                        try:
+                            from llm_model import add_user_contributions_to_vectorstore
+                            from langchain_core.documents import Document
+                            
+                            user_doc = Document(
+                                page_content=user_message,
+                                metadata={
+                                    "source": "user_contribution",
+                                    "category": "general",
+                                    "session_id": session.session_id
+                                }
+                            )
+                            add_user_contributions_to_vectorstore(llm_chain, [user_doc])
+                            logging.info(f"✅ NEW info immediately available for retrieval")
+                        except Exception as e:
+                            logging.error(f"❌ Error adding to vector store: {e}")
+                    else:
+                        logging.info(f"⛔ Rejected: conflicts with existing data")
+                        detected_info = False  # Update flag since it was rejected
 
             return jsonify({
                 "status": "success",
@@ -331,8 +516,116 @@ Answer:"""
                 "session_id": session.session_id,
                 "message_id": session.messages[-1]["id"],
                 "sources": session.metadata.get('last_sources', []),
-                "session": session.to_dict()
+                "session": session.to_dict(),
+                "new_info_detected": detected_info,
+                "query_context": query_context  # Include context for frontend
             })
+
+    except Exception as e:
+        logging.error(f"Chat error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route('/api/chat/followup', methods=['POST'])
+def generate_followup_questions():
+    """Generate context-aware follow-up questions based on the conversation"""
+    try:
+        data = request.json
+        user_message = data.get('user_message', '')
+        bot_response = data.get('bot_response', '')
+        query_context = data.get('query_context')
+        
+        if not user_message or not bot_response:
+            return jsonify({"status": "error", "message": "Missing required fields"}), 400
+        
+        if model_status["status"] != "ready" or not llm_chain:
+            return jsonify({
+                "status": "success",
+                "questions": [
+                    "Tell me more about that",
+                    "What else should I know?",
+                    "Can you elaborate?"
+                ]
+            })
+        
+        gemini_model = llm_chain.get("gemini_model")
+        if not gemini_model:
+            return jsonify({
+                "status": "success",
+                "questions": [
+                    "Tell me more about that",
+                    "What else should I know?",
+                    "Can you elaborate?"
+                ]
+            })
+        
+        # Create context-aware prompt for follow-up generation
+        context_hint = f" (in the context of {query_context.replace('_', ' ')})" if query_context else ""
+        
+        followup_prompt = f"""Based on this conversation about Arvind{context_hint}, generate 3 specific, contextual follow-up questions that the user might want to ask next.
+
+User Question: {user_message[:300]}
+Pasupathy's Response: {bot_response[:500]}
+
+Requirements:
+- Each question should be 5-10 words
+- Questions should dig deeper into the current topic
+- Stay focused on the context (e.g., if about computer vision, ask about CV details)
+- Make questions natural and conversational
+- Avoid generic questions like "tell me more"
+
+Examples of good follow-up questions:
+- For education: "What was your major GPA?" or "Which courses did you excel in?"
+- For computer vision: "What datasets did you use?" or "How accurate was your model?"
+- For projects: "What technologies did you use?" or "What challenges did you face?"
+
+Generate 3 follow-up questions, one per line:"""
+
+        response = gemini_model.generate_content(followup_prompt)
+        questions_text = response.text.strip()
+        
+        # Parse questions (split by newline and clean)
+        questions = []
+        for line in questions_text.split('\n'):
+            # Remove numbering, bullets, dashes
+            cleaned = line.strip()
+            for prefix in ['1.', '2.', '3.', '-', '•', '*']:
+                if cleaned.startswith(prefix):
+                    cleaned = cleaned[len(prefix):].strip()
+            
+            if cleaned and len(cleaned) > 10:  # Must be substantial
+                questions.append(cleaned)
+                if len(questions) == 3:
+                    break
+        
+        # Fallback if not enough questions generated
+        if len(questions) < 3:
+            fallback = [
+                "Can you provide more details?",
+                "What else should I know about this?",
+                "How does this relate to other aspects?"
+            ]
+            questions.extend(fallback[:3 - len(questions)])
+        
+        logging.info(f"💡 Generated follow-up questions: {questions}")
+        
+        return jsonify({
+            "status": "success",
+            "questions": questions[:3]
+        })
+        
+    except Exception as e:
+        logging.error(f"Follow-up generation error: {str(e)}")
+        # Return generic fallback on error
+        return jsonify({
+            "status": "success",
+            "questions": [
+                "Tell me more about that",
+                "What else should I know?",
+                "Can you elaborate?"
+            ]
+        })
 
     except Exception as e:
         logging.error(f"Chat error: {str(e)}")
@@ -678,6 +971,162 @@ def dataset_stats():
     except Exception as e:
         logging.error(f"Stats error: {str(e)}")
         return jsonify({"status": "error", "message": str(e)}), 500
+
+
+# ==================== USER KNOWLEDGE MANAGEMENT ENDPOINTS ====================
+
+@app.route('/api/knowledge/add', methods=['POST'])
+@rate_limit
+def add_user_knowledge():
+    """Manually add user-provided knowledge"""
+    try:
+        if not user_knowledge_manager:
+            return jsonify({"status": "error", "message": "Knowledge manager not initialized"}), 503
+        
+        data = request.json
+        content = data.get('content', '').strip()
+        session_id = data.get('session_id', 'manual')
+        category = data.get('category', 'general')
+        auto_approve = data.get('auto_approve', False)
+        
+        if not content:
+            return jsonify({"status": "error", "message": "Content is required"}), 400
+        
+        doc_id = user_knowledge_manager.store_user_contribution(
+            content=content,
+            session_id=session_id,
+            category=category,
+            detection_type='manual',
+            auto_approve=auto_approve
+        )
+        
+        if not doc_id:
+            return jsonify({"status": "error", "message": "Failed to store contribution"}), 500
+        
+        # If auto-approved, add to vectorstore immediately
+        if auto_approve and llm_chain:
+            from llm_model import add_user_contributions_to_vectorstore
+            from langchain_core.documents import Document
+            
+            user_doc = Document(
+                page_content=content,
+                metadata={"source": "user_contribution", "category": category}
+            )
+            add_user_contributions_to_vectorstore(llm_chain, [user_doc])
+        
+        return jsonify({
+            "status": "success",
+            "message": "Knowledge added successfully",
+            "id": doc_id,
+            "auto_approved": auto_approve
+        })
+        
+    except Exception as e:
+        logging.error(f"Add knowledge error: {str(e)}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route('/api/knowledge/pending', methods=['GET'])
+@rate_limit
+def get_pending_knowledge():
+    """Get contributions awaiting approval"""
+    try:
+        if not user_knowledge_manager:
+            return jsonify({"status": "error", "message": "Knowledge manager not initialized"}), 503
+        
+        limit = request.args.get('limit', 50, type=int)
+        pending = user_knowledge_manager.get_pending_contributions(limit=limit)
+        
+        return jsonify({
+            "status": "success",
+            "pending_contributions": pending,
+            "count": len(pending)
+        })
+        
+    except Exception as e:
+        logging.error(f"Get pending error: {str(e)}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route('/api/knowledge/approve/<contribution_id>', methods=['POST'])
+@rate_limit
+def approve_knowledge(contribution_id):
+    """Approve a user contribution"""
+    try:
+        if not user_knowledge_manager:
+            return jsonify({"status": "error", "message": "Knowledge manager not initialized"}), 503
+        
+        # Approve the contribution
+        success = user_knowledge_manager.approve_contribution(contribution_id)
+        
+        if not success:
+            return jsonify({"status": "error", "message": "Failed to approve contribution"}), 500
+        
+        # Add to vectorstore
+        if llm_chain:
+            from llm_model import add_user_contributions_to_vectorstore
+            contributions = user_knowledge_manager.get_user_contributions(approved_only=True, limit=1)
+            
+            if contributions:
+                add_user_contributions_to_vectorstore(llm_chain, contributions)
+        
+        return jsonify({
+            "status": "success",
+            "message": "Contribution approved and added to knowledge base"
+        })
+        
+    except Exception as e:
+        logging.error(f"Approve error: {str(e)}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route('/api/knowledge/stats', methods=['GET'])
+@rate_limit
+def get_knowledge_stats():
+    """Get user knowledge statistics"""
+    try:
+        if not user_knowledge_manager:
+            return jsonify({"status": "error", "message": "Knowledge manager not initialized"}), 503
+        
+        stats = user_knowledge_manager.get_stats()
+        
+        return jsonify({
+            "status": "success",
+            "stats": stats
+        })
+        
+    except Exception as e:
+        logging.error(f"Stats error: {str(e)}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route('/api/knowledge/rebuild', methods=['POST'])
+@rate_limit
+def rebuild_knowledge_base():
+    """Rebuild entire vectorstore with all approved user contributions"""
+    global llm_chain
+    
+    try:
+        if not user_knowledge_manager or not llm_chain:
+            return jsonify({"status": "error", "message": "System not initialized"}), 503
+        
+        from llm_model import rebuild_vectorstore_with_contributions
+        
+        logging.info("🔄 Starting knowledge base rebuild...")
+        llm_chain = rebuild_vectorstore_with_contributions(mongo.db, llm_chain)
+        
+        stats = user_knowledge_manager.get_stats()
+        
+        return jsonify({
+            "status": "success",
+            "message": "Knowledge base rebuilt successfully",
+            "stats": stats
+        })
+        
+    except Exception as e:
+        logging.error(f"Rebuild error: {str(e)}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
 
 if __name__ == '__main__':
     # Create indexes for better performance

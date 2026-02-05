@@ -173,16 +173,25 @@ export const deleteChat = async (sessionId) => {
   }
 };
 
+/**
+ * Upload dataset to backend
+ * Expected format: Array of objects, each with:
+ * - text (required): Combined Q&A format "Question: ...\nAnswer: ..."
+ * - question: The question text
+ * - answer: The answer text
+ * - category, subcategory, difficulty: Optional metadata
+ * - source: Origin of the data
+ */
 export const uploadDataset = async (file) => {
   try {
     if (!file) {
       throw new Error('File is required');
     }
     
-    // Validate file size (limit to 50MB)
-    const MAX_FILE_SIZE = 50 * 1024 * 1024;
+    // Validate file size (limit to 100MB for large datasets)
+    const MAX_FILE_SIZE = 100 * 1024 * 1024;
     if (file.size > MAX_FILE_SIZE) {
-      throw new Error('File size exceeds 50MB limit');
+      throw new Error('File size exceeds 100MB limit');
     }
     
     // Validate file type
@@ -303,5 +312,28 @@ export const sendMessageStream = async (message, sessionId, onChunk) => {
         onChunk(data);
       }
     }
+  }
+};
+
+export const generateFollowUpQuestions = async (userMessage, botResponse, queryContext = null) => {
+  try {
+    const response = await api.post('/chat/followup', {
+      user_message: userMessage,
+      bot_response: botResponse,
+      query_context: queryContext
+    }, { timeout: 10000 });
+    
+    return response.data;
+  } catch (error) {
+    console.error('Follow-up generation error:', error);
+    // Return generic fallback on error
+    return {
+      status: 'success',
+      questions: [
+        "Tell me more about that",
+        "What else should I know?",
+        "Can you elaborate?"
+      ]
+    };
   }
 };
