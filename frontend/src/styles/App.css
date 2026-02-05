@@ -1,36 +1,36 @@
 /* CSS Variables for Theming */
 :root[data-theme="dark"] {
-  --bg-primary: #0a0a0f;
-  --bg-secondary: #101014;
-  --bg-tertiary: #1a1a1f;
-  --bg-hover: rgba(139, 92, 246, 0.1);
-  --border-color: rgba(139, 92, 246, 0.2);
-  --text-primary: #ffffff;
-  --text-secondary: rgba(255, 255, 255, 0.7);
-  --text-tertiary: rgba(255, 255, 255, 0.5);
-  --accent-color: #8b5cf6;
-  --accent-gradient: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);
-  --accent-glow: rgba(139, 92, 246, 0.2);
+  --bg-primary: #0E0F13;
+  --bg-secondary: #141B2D;
+  --bg-tertiary: #1a1d2b;
+  --bg-hover: rgba(111, 168, 220, 0.1);
+  --border-color: rgba(58, 92, 130, 0.3);
+  --text-primary: #F5F3EE;
+  --text-secondary: rgba(245, 243, 238, 0.7);
+  --text-tertiary: rgba(245, 243, 238, 0.5);
+  --accent-color: #F2B94F;
+  --accent-gradient: linear-gradient(135deg, #F2B94F 0%, #E09F3E 100%);
+  --accent-glow: rgba(242, 185, 79, 0.25);
   --success-color: #10b981;
   --error-color: #ef4444;
-  --warning-color: #f59e0b;
+  --warning-color: #E09F3E;
 }
 
 :root[data-theme="light"] {
-  --bg-primary: #ffffff;
-  --bg-secondary: #f9fafb;
-  --bg-tertiary: #f3f4f6;
-  --bg-hover: rgba(139, 92, 246, 0.05);
-  --border-color: rgba(0, 0, 0, 0.1);
-  --text-primary: #111827;
-  --text-secondary: #6b7280;
-  --text-tertiary: #9ca3af;
-  --accent-color: #7c3aed;
-  --accent-gradient: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%);
-  --accent-glow: rgba(124, 58, 237, 0.15);
+  --bg-primary: #F5F3EE;
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #e8e6e1;
+  --bg-hover: rgba(242, 185, 79, 0.1);
+  --border-color: rgba(58, 92, 130, 0.2);
+  --text-primary: #0E0F13;
+  --text-secondary: #4B4F3A;
+  --text-tertiary: #6b6f5a;
+  --accent-color: #E09F3E;
+  --accent-gradient: linear-gradient(135deg, #F2B94F 0%, #E09F3E 100%);
+  --accent-glow: rgba(242, 185, 79, 0.2);
   --success-color: #059669;
   --error-color: #dc2626;
-  --warning-color: #d97706;
+  --warning-color: #E09F3E;
 }
 
 /* Reset */
