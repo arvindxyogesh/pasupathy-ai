@@ -1138,4 +1138,6 @@ if __name__ == '__main__':
     except Exception as e:
         logging.warning(f"Index creation warning: {str(e)}")
     
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    # Use PORT from environment variable (Render sets this)
+    port = int(os.environ.get('PORT', 5000))
+    app.run(debug=False, host='0.0.0.0', port=port)
