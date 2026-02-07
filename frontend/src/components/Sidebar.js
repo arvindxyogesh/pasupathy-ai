@@ -218,24 +218,31 @@ const Sidebar = ({ sessions, currentSession, onSelectSession, onCreateNewChat, o
         </div>
       )}
 
-      <div className="health-status">
-        <div className={`status-item ${healthStatus?.status}`}>
-          {healthStatus?.status === 'ready' ? (
-            <CheckCircle size={16} className="ready" />
-          ) : (
-            <AlertCircle size={16} className="error" />
-          )}
-          <span>Model: {healthStatus?.initialized ? 'Ready' : 'Loading'}</span>
+      {/* Show health status only if there's an issue */}
+      {healthStatus && (
+        healthStatus.status !== 'ready' || 
+        healthStatus.database !== 'connected' ||
+        !healthStatus.initialized
+      ) && (
+        <div className="health-status">
+          <div className={`status-item ${healthStatus?.status}`}>
+            {healthStatus?.status === 'ready' ? (
+              <CheckCircle size={16} className="ready" />
+            ) : (
+              <AlertCircle size={16} className="error" />
+            )}
+            <span>Model: {healthStatus?.initialized ? 'Ready' : 'Loading'}</span>
+          </div>
+          <div className={`status-item ${healthStatus?.database === 'connected' ? 'ready' : 'error'}`}>
+            {healthStatus?.database === 'connected' ? (
+              <CheckCircle size={16} className="ready" />
+            ) : (
+              <AlertCircle size={16} className="error" />
+            )}
+            <span>DB: {healthStatus?.database || 'Unknown'}</span>
+          </div>
         </div>
-        <div className={`status-item ${healthStatus?.database === 'connected' ? 'ready' : 'error'}`}>
-          {healthStatus?.database === 'connected' ? (
-            <CheckCircle size={16} className="ready" />
-          ) : (
-            <AlertCircle size={16} className="error" />
-          )}
-          <span>DB: {healthStatus?.database || 'Unknown'}</span>
-        </div>
-      </div>
+      )}
 
       <div className="sessions-list">
         <div className="sessions-header">

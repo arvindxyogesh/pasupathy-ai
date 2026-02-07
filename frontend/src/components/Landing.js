@@ -12,7 +12,7 @@ const Landing = ({ onEnter, healthStatus }) => {
             <div className="profile-image-container">
               <img 
                 src="/profile.jpg" 
-                alt="Arvind" 
+                alt="Arvind Yogesh Suresh Babu" 
                 className="profile-image"
                 onError={(e) => {
                   // Fallback to placeholder if image not found
@@ -22,10 +22,10 @@ const Landing = ({ onEnter, healthStatus }) => {
               <div className="profile-ring"></div>
             </div>
             <div className="profile-intro">
-              <h2 className="profile-name">Arvind</h2>
-              <p className="profile-tagline">Computer Vision Engineer | AI Enthusiast | Problem Solver</p>
+              <h2 className="profile-name">Arvind Yogesh Suresh Babu</h2>
+              <p className="profile-tagline">Computer Vision Engineer | AI Enthusiast</p>
               <p className="profile-description">
-                Welcome! I'm Arvind, passionate about building intelligent systems that see and understand the world. 
+                Welcome! I'm Arvind Yogesh Suresh Babu, passionate about building intelligent systems that see and understand the world. 
                 Through Pasupathy, you can explore my journey in computer vision, machine learning, robotics, and more. 
                 Ask me anything about my projects, skills, experience, or research!
               </p>
@@ -58,41 +58,54 @@ const Landing = ({ onEnter, healthStatus }) => {
             </div>
           </div>
 
-          <div className="system-status">
-            <h3>System Status</h3>
-            <div className="status-items">
-              <div className={`status-item ${healthStatus?.status === 'ready' ? 'ready' : healthStatus?.status === 'initializing' ? 'initializing' : 'error'}`}>
-                {healthStatus?.status === 'ready' ? (
-                  <CheckCircle size={20} className="ready" />
-                ) : (
-                  <AlertCircle size={20} className={healthStatus?.status === 'initializing' ? 'initializing' : 'error'} />
-                )}
-                <span>API: {healthStatus?.status || 'Checking...'}</span>
-              </div>
-              <div className={`status-item ${healthStatus?.database === 'connected' ? 'ready' : 'error'}`}>
-                {healthStatus?.database === 'connected' ? (
-                  <CheckCircle size={20} className="ready" />
-                ) : (
-                  <AlertCircle size={20} className="error" />
-                )}
-                <span>Database: {healthStatus?.database || 'Unknown'}</span>
-              </div>
-              <div className={`status-item ${healthStatus?.model_status === 'ready' ? 'ready' : healthStatus?.model_status === 'initializing' ? 'initializing' : 'error'}`}>
-                {healthStatus?.model_status === 'ready' ? (
-                  <CheckCircle size={20} className="ready" />
-                ) : (
-                  <AlertCircle size={20} className={healthStatus?.model_status === 'initializing' ? 'initializing' : 'error'} />
-                )}
-                <span>Model: {healthStatus?.model_status === 'ready' ? 'Ready' : healthStatus?.model_message || 'Initializing'}</span>
-              </div>
-              {healthStatus?.dataset_count !== undefined && (
-                <div className="status-item ready">
-                  <CheckCircle size={20} className="ready" />
-                  <span>Knowledge Base: {healthStatus.dataset_count.toLocaleString()} documents</span>
+          {/* Show system status only if there's an issue */}
+          {healthStatus && (
+            healthStatus.status !== 'ready' || 
+            healthStatus.database !== 'connected' || 
+            healthStatus.model_status !== 'ready' ||
+            healthStatus.dataset_count === 0 ||
+            healthStatus.error
+          ) && (
+            <div className="system-status">
+              <h3>System Status</h3>
+              <div className="status-items">
+                <div className={`status-item ${healthStatus?.status === 'ready' ? 'ready' : healthStatus?.status === 'initializing' ? 'initializing' : 'error'}`}>
+                  {healthStatus?.status === 'ready' ? (
+                    <CheckCircle size={20} className="ready" />
+                  ) : (
+                    <AlertCircle size={20} className={healthStatus?.status === 'initializing' ? 'initializing' : 'error'} />
+                  )}
+                  <span>API: {healthStatus?.status || 'Checking...'}</span>
                 </div>
-              )}
+                <div className={`status-item ${healthStatus?.database === 'connected' ? 'ready' : 'error'}`}>
+                  {healthStatus?.database === 'connected' ? (
+                    <CheckCircle size={20} className="ready" />
+                  ) : (
+                    <AlertCircle size={20} className="error" />
+                  )}
+                  <span>Database: {healthStatus?.database || 'Unknown'}</span>
+                </div>
+                <div className={`status-item ${healthStatus?.model_status === 'ready' ? 'ready' : healthStatus?.model_status === 'initializing' ? 'initializing' : 'error'}`}>
+                  {healthStatus?.model_status === 'ready' ? (
+                    <CheckCircle size={20} className="ready" />
+                  ) : (
+                    <AlertCircle size={20} className={healthStatus?.model_status === 'initializing' ? 'initializing' : 'error'} />
+                  )}
+                  <span>Model: {healthStatus?.model_status === 'ready' ? 'Ready' : healthStatus?.model_message || 'Initializing'}</span>
+                </div>
+                {healthStatus?.dataset_count !== undefined && (
+                  <div className={`status-item ${healthStatus.dataset_count > 0 ? 'ready' : 'error'}`}>
+                    {healthStatus.dataset_count > 0 ? (
+                      <CheckCircle size={20} className="ready" />
+                    ) : (
+                      <AlertCircle size={20} className="error" />
+                    )}
+                    <span>Knowledge Base: {healthStatus.dataset_count.toLocaleString()} documents</span>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
+          )}
 
           <button 
             onClick={onEnter} 

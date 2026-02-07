@@ -97,6 +97,23 @@ Thumbs.db
 *.temp
 ~*
 
+# Documentation and Guides (for reference only)
+AWS_DEPLOYMENT_GUIDE.md
+DEPLOY_NOW.md
+ENHANCED_FEATURES.md
+FILE_MAP.md
+IMPLEMENTATION_SUMMARY.md
+PROFILE_IMAGE_SETUP.md
+QUICK_REFERENCE.md
+REINFORCEMENT_LEARNING_GUIDE.md
+*_GUIDE.md
+*_SUMMARY.md
+
+# Reference/testing scripts
+deploy_enhanced.sh
+fix_rag.sh
+test_rag.sh
+
 # Elastic Beanstalk Files
 .elasticbeanstalk/*
 !.elasticbeanstalk/*.cfg.yml

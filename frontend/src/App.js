@@ -49,14 +49,22 @@ function App() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  const loadSessions = async () => {
+  const loadSessions = () => {
     try {
-      const response = await fetch('http://localhost:5000/api/chat/sessions');
-      const data = await response.json();
-      setSessions(data.sessions);
+      // Load sessions from localStorage only (private to this browser)
+      const savedSessions = localStorage.getItem('chat_sessions');
+      if (savedSessions) {
+        setSessions(JSON.parse(savedSessions));
+      }
     } catch (error) {
       console.error('Error loading sessions:', error);
     }
+  };
+
+  const saveSessions = (newSessions) => {
+    // Save to localStorage only (keeps chats private)
+    localStorage.setItem('chat_sessions', JSON.stringify(newSessions));
+    setSessions(newSessions);
   };
 
   const checkHealth = async () => {
@@ -86,14 +94,12 @@ function App() {
 
   const deleteSession = async (sessionId) => {
     try {
-      await fetch(`http://localhost:5000/api/chat/sessions/${sessionId}`, {
-        method: 'DELETE',
-      });
+      const updatedSessions = sessions.filter(s => s.session_id !== sessionId);
+      saveSessions(updatedSessions);  // Save to localStorage only
       
       if (currentSession && currentSession.session_id === sessionId) {
         setCurrentSession(null);
       }
-      loadSessions();
     } catch (error) {
       console.error('Error deleting session:', error);
     }
@@ -101,19 +107,17 @@ function App() {
 
   const renameSession = async (sessionId, newTitle) => {
     try {
-      await fetch(`http://localhost:5000/api/chat/sessions/${sessionId}/rename`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ title: newTitle }),
-      });
+      const updatedSessions = sessions.map(session => 
+        session.session_id === sessionId 
+          ? { ...session, title: newTitle }
+          : session
+      );
+      saveSessions(updatedSessions);  // Save to localStorage only
       
-      // Update local state
+      // Update current session if it's the one being renamed
       if (currentSession && currentSession.session_id === sessionId) {
         setCurrentSession(prev => ({ ...prev, title: newTitle }));
       }
-      loadSessions();
     } catch (error) {
       console.error('Error renaming session:', error);
     }
@@ -122,7 +126,19 @@ function App() {
   const handleSessionUpdate = (updatedSession) => {
     if (updatedSession && updatedSession.session_id) {
       setCurrentSession(updatedSession);
-      setTimeout(() => loadSessions(), 500);
+      
+      // Update or add session in localStorage
+      const existingIndex = sessions.findIndex(s => s.session_id === updatedSession.session_id);
+      let updatedSessions;
+      
+      if (existingIndex >= 0) {
+        updatedSessions = [...sessions];
+        updatedSessions[existingIndex] = updatedSession;
+      } else {
+        updatedSessions = [updatedSession, ...sessions];
+      }
+      
+      saveSessions(updatedSessions);
     }
   };
 
