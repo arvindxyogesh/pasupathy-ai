@@ -88,15 +88,14 @@ pip install awsebcli --upgrade --user
 Configure EB CLI:
 ```bash
 cd /Users/arvindxyogesh/Documents/pasupathy-ai
-eb init
+eb init --profile eb-cli --region us-west-2 --platform docker
 ```
 
 When prompted:
-- **Region**: Choose closest to you (e.g., `us-east-1`)
 - **Application name**: `pasupathy-ai`
-- **Platform**: `Python 3.11`
-- **Use SSH**: `n` (No)
 - Enter your **Access Key ID** and **Secret Access Key**
+
+**Note**: Using **Docker platform** instead of Python ensures reliable dependency installation. AL2023 Python platforms have known issues with requirements.txt installation.
 
 ---
 
@@ -106,15 +105,16 @@ When prompted:
 
 ```bash
 eb create pasupathy-backend \
+  --single \
   --instance-type t3.micro \
-  --platform "Python 3.11" \
   --timeout 20
 ```
 
 This will:
 - Create environment named `pasupathy-backend`
+- Use single instance (free tier eligible)
 - Use t3.micro (1GB RAM, free tier)
-- Use Python 3.11
+- Deploy Docker container with Flask app
 - Wait up to 20 minutes for deployment
 
 ### 4.2 Set Environment Variables
@@ -284,11 +284,36 @@ eb list
 
 ## 🐛 Troubleshooting
 
+### "Invalid option value: 'apache'" error:
+This happens when EB detects Python files (requirements.txt, Procfile) at root level:
+
+**Solution 1: Clean slate**
+```bash
+# Remove cached EB config
+mv .elasticbeanstalk .elasticbeanstalk.bak
+
+# Reinitialize with Docker platform
+eb init --profile eb-cli --region us-west-2 --platform docker
+
+# Create environment
+eb create pasupathy-backend --single --instance-type t3.micro --timeout 20
+```
+
+**Solution 2: Ensure only Dockerfile exists**
+```bash
+# Move Python detection files (temporarily)
+mv requirements.txt requirements.txt.bak
+mv Procfile Procfile.bak
+
+# Create environment
+eb create pasupathy-backend --single --instance-type t3.micro --timeout 20
+```
+
 ### Deployment fails:
 ```bash
 eb logs
 ```
-Check for Python errors or missing dependencies
+Check for Docker build errors or missing dependencies
 
 ### Memory issues:
 Upgrade instance type:
@@ -304,9 +329,18 @@ eb printenv
 Verify variables are set correctly
 
 ### Health check failing:
-1. Check Flask app is running on port 8000
-2. Verify `/api/health` endpoint works
-3. Check security group allows HTTP traffic
+1. Check Docker container is running
+2. Verify Flask app is running on port 8000
+3. Test `/api/health` endpoint
+4. Check security group allows HTTP traffic
+
+### Docker build fails:
+Check your Dockerfile:
+```bash
+# Test build locally
+docker build -t pasupathy-test .
+docker run -p 8000:8000 pasupathy-test
+```
 
 ---
 
