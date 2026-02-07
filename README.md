@@ -1,27 +1,27 @@
-# Pasupathy - Arvind's Personal AI Assistant
+# Pasupathy - Personal AI Assistant
 
 ![Pasupathy Logo](https://img.shields.io/badge/AI-Pasupathy-8b5cf6?style=for-the-badge)
 ![Python](https://img.shields.io/badge/Python-3.11-blue?style=flat-square)
 ![React](https://img.shields.io/badge/React-18.2-61dafb?style=flat-square)
 ![Docker](https://img.shields.io/badge/Docker-Ready-2496ed?style=flat-square)
 
-**Pasupathy** is Arvind Yogesh Suresh Babu's sophisticated personal AI assistant, powered by Retrieval-Augmented Generation (RAG) technology. Built by Arvind using cutting-edge LLM capabilities and a futuristic ChatGPT-style interface, Pasupathy provides intelligent, context-aware responses based on Arvind's curated personal knowledge base.
+**Pasupathy** is a sophisticated personal AI assistant powered by Retrieval-Augmented Generation (RAG) technology. Built using cutting-edge LLM capabilities and a futuristic ChatGPT-style interface, it provides intelligent, context-aware responses based on curated personal knowledge.
 
-This project showcases Arvind's expertise in full-stack AI development, cloud infrastructure, and modern web technologies.
+This project demonstrates expertise in full-stack AI development, cloud infrastructure, and modern web technologies.
 
 ## Key Features
 
-- **Advanced RAG System** - Arvind implemented FAISS vector store with semantic search for accurate context retrieval from his personal knowledge base
+- **Advanced RAG System** - Implemented FAISS vector store with semantic search for accurate context retrieval
 - **Real-time Streaming** - ChatGPT-like streaming responses providing smooth user experience
-- **Futuristic UI** - Arvind designed a modern black and purple theme with glassmorphism effects
+- **Futuristic UI** - Modern black and purple theme with glassmorphism effects
 - **Browser-Only Privacy** - All chat sessions stored locally in browser localStorage, ensuring complete privacy
 - **Fast Performance** - FAISS index persistence loads in 5 seconds versus 60 minute rebuild
 - **Production-Ready Deployment** - Complete AWS infrastructure with Docker containerization
-- **HTTPS Security** - Arvind configured CloudFront CDN for secure HTTPS access on both frontend and backend
+- **HTTPS Security** - CloudFront CDN configuration for secure HTTPS access on both frontend and backend
 
 ## Architecture Overview
 
-Arvind architected this system using modern cloud-native design patterns:
+Modern cloud-native design patterns:
 
 ```
 ┌─────────────────┐      ┌──────────────────┐      ┌─────────────────┐
@@ -37,7 +37,7 @@ Arvind architected this system using modern cloud-native design patterns:
                          └──────────────────┘
 ```
 
-**Technology Stack (Selected by Arvind):**
+**Technology Stack:**
 - **Backend**: Flask 2.3.3, LangChain, Google Gemini 2.5 Flash
 - **Frontend**: React 18.2 with real-time streaming via Server-Sent Events
 - **Vector Database**: FAISS with HuggingFace embeddings (all-MiniLM-L6-v2)
@@ -55,7 +55,7 @@ Arvind architected this system using modern cloud-native design patterns:
 
 ### Installation
 
-1. **Clone Arvind's repository**
+1. **Clone the repository**
    ```bash
    git clone https://github.com/arvindxyogesh/pasupathy-ai.git
    cd pasupathy-ai
@@ -84,7 +84,7 @@ Arvind architected this system using modern cloud-native design patterns:
 
 ### First-Time Setup
 
-On first run, Arvind's system will:
+On first run, the system will:
 - Build FAISS embeddings from the personal knowledge dataset (approximately 60 minutes for 97K documents)
 - Save the index to disk for future fast loading (5 seconds)
 - Initialize the Gemini model
@@ -93,19 +93,19 @@ Subsequent starts will load from disk in approximately 5 seconds.
 
 ## Dataset Format
 
-Arvind's personal knowledge is stored in `data/arvind_personal_llm_dataset_mongo.json`:
+Personal knowledge is stored in `data/arvind_personal_llm_dataset_mongo.json`:
 
 ```json
 [
   {
-    "text": "Arvind is a software engineer specializing in AI and machine learning",
+    "text": "Your knowledge content here",
     "category": "personal",
     "source": "bio"
   }
 ]
 ```
 
-Or upload via the API that Arvind built:
+Or upload via API:
 ```bash
 curl -X POST http://localhost:5000/api/dataset/upload \
   -H "Content-Type: multipart/form-data" \
@@ -114,7 +114,7 @@ curl -X POST http://localhost:5000/api/dataset/upload \
 
 ## User Interface Features
 
-### Modern Design (Designed by Arvind)
+### Modern Design
 - **Black and Purple Theme** - Futuristic ChatGPT-inspired interface
 - **Glassmorphism Effects** - Translucent elements with backdrop blur
 - **Smooth Animations** - Fade-in messages and hover effects
@@ -133,7 +133,7 @@ curl -X POST http://localhost:5000/api/dataset/upload \
 
 ### Backend Configuration
 
-Arvind configured the backend in `backend/config.py`:
+Backend settings in `backend/config.py`:
 
 ```python
 GEMINI_MODELS = ["gemini-2.5-flash", "gemini-1.5-flash", "gemini-1.5-pro"]
@@ -158,8 +158,8 @@ CHUNK_OVERLAP = 200
 - `DELETE /api/chat/sessions/:id` - Delete a session
 
 ### Dataset Management
-- `POST /api/dataset/upload` - Upload Arvind's knowledge base
-- `GET /api/dataset/stats` - Get dataset statistics (currently 251 documents)
+- `POST /api/dataset/upload` - Upload knowledge base
+- `GET /api/dataset/stats` - Get dataset statistics
 
 ### System Health
 - `GET /api/health` - Health check endpoint (database, model status)
@@ -295,7 +295,7 @@ docker-compose up -d  # Start fresh with new environment
 
 ## Performance Metrics
 
-Arvind optimized the system for production performance:
+Optimized system performance:
 
 - **Initial embedding build**: Approximately 60 minutes (one-time, for 97K documents)
 - **FAISS load time**: Approximately 5 seconds (cached from disk)
@@ -305,7 +305,7 @@ Arvind optimized the system for production performance:
 
 ## Security Best Practices
 
-Arvind implemented the following security measures:
+Implemented security measures:
 
 - **Never commit `.env` file to version control** - Contains sensitive API keys
 - **Rotate API keys regularly** - Best practice for credential management
@@ -316,7 +316,7 @@ Arvind implemented the following security measures:
 
 ## AWS Production Deployment
 
-Arvind deployed this application using modern AWS infrastructure:
+Deployed using modern AWS infrastructure:
 
 **Current Production Setup:**
 - **Frontend**: AWS S3 Static Website + CloudFront CDN (HTTPS)
@@ -337,8 +337,8 @@ Arvind deployed this application using modern AWS infrastructure:
 
 ## Contributing
 
-This is Arvind's personal project. If you'd like to contribute or have suggestions:
-1. Fork Arvind's repository
+This is a personal project. If you'd like to contribute or have suggestions:
+1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
 3. Make your changes with clear documentation
 4. Commit your changes (`git commit -m 'Add amazing feature'`)
@@ -347,11 +347,11 @@ This is Arvind's personal project. If you'd like to contribute or have suggestio
 
 ## License
 
-This project is personal and proprietary. All rights reserved by Arvind Yogesh Suresh Babu.
+This project is personal and proprietary. All rights reserved.
 
 ## Technical Acknowledgments
 
-Arvind leveraged the following open-source technologies:
+Leveraging the following open-source technologies:
 
 - [LangChain](https://langchain.com) - RAG framework for building AI applications
 - [Google Gemini](https://ai.google.dev) - Large language model provider
@@ -363,7 +363,7 @@ Arvind leveraged the following open-source technologies:
 
 ## Support and Contact
 
-For issues or questions about Arvind's Pasupathy AI Assistant:
+For issues or questions about the Pasupathy AI Assistant:
 
 **Debugging Steps:**
 1. Check the [Troubleshooting Guide](#troubleshooting-guide) section above
@@ -376,13 +376,13 @@ For issues or questions about Arvind's Pasupathy AI Assistant:
 - API operational status
 - Database connection status
 - LLM model initialization status
-- Dataset document count (should be 251 for Arvind's dataset)
+- Dataset document count
 
 ## Development and Testing
 
 ### Adding New Features
 
-Arvind designed the codebase for easy extensibility:
+Designed for easy extensibility:
 
 1. **Backend endpoint**: Add to `backend/app.py` and update `config.py` if needed
 2. **Frontend component**: Create in `frontend/src/components/`
@@ -404,7 +404,7 @@ curl http://localhost:5000/api/health
 
 ## Related Documentation
 
-For deeper technical insights into Arvind's implementation:
+For deeper technical insights:
 
 - [Project Architecture Details](./.github/copilot-instructions.md) - Comprehensive system design
 - [Flask Documentation](https://flask.palletsprojects.com/) - Python web framework
@@ -416,6 +416,6 @@ For deeper technical insights into Arvind's implementation:
 
 ---
 
-**Pasupathy - Built by Arvind Yogesh Suresh Babu**  
+**Pasupathy - Personal AI Assistant**  
 **Powered by Google Gemini AI, LangChain RAG, and AWS Cloud Infrastructure**  
 **Repository**: https://github.com/arvindxyogesh/pasupathy-ai
