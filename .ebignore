@@ -1,0 +1,13 @@
+# EB should ignore these files
+docker-compose.yml
+docker-compose.yml.bak
+.elasticbeanstalk.bak/
+frontend/
+data/
+backups/
+.git/
+.DS_Store
+*.bak
+__pycache__/
+*.pyc
+.env
