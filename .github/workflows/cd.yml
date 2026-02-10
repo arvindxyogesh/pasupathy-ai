@@ -82,8 +82,8 @@ jobs:
         
   docker-publish:
     name: Build and Push Docker Images
-    runs${{ github.ref == 'refs/heads/main' && secrets.DOCKER_USERNAME != '' }}
-    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    if: ${{ github.ref == 'refs/heads/main' && secrets.DOCKER_USERNAME != '' }}
     
     steps:
     - name: Checkout code
