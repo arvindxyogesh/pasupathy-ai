@@ -13,3 +13,6 @@ flask-caching==2.1.0
 redis==5.0.1
 langchain-core==0.1.52
 gunicorn==21.2.0
+pytest==7.4.3
+pytest-cov==4.1.0
+flake8==6.1.0

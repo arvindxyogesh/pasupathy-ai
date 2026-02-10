@@ -1,0 +1,70 @@
+name: Docker Build & Test
+
+on:
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+jobs:
+  docker-compose-test:
+    name: Docker Compose Integration Test
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Create .env file
+      run: |
+        cat > .env << EOF
+        GOOGLE_API_KEY=${{ secrets.GOOGLE_API_KEY || 'test-key' }}
+        MONGO_URI=mongodb://mongodb:27017/llm_chat
+        SECRET_KEY=test-secret-key-for-ci
+        EOF
+        
+    - name: Build with Docker Compose
+      run: |
+        docker-compose build
+        
+    - name: Start services
+      run: |
+        docker-compose up -d
+        
+    - name: Wait for services to be healthy
+      run: |
+        echo "Waiting for services to start..."
+        sleep 30
+        
+    - name: Check MongoDB
+      run: |
+        docker-compose exec -T mongodb mongosh --eval "db.version()"
+        
+    - name: Check backend health
+      run: |
+        RESPONSE=$(curl -s http://localhost:5000/api/health || echo '{"status":"error"}')
+        echo "Backend health: $RESPONSE"
+        
+    - name: Check frontend
+      run: |
+        RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000)
+        echo "Frontend status: $RESPONSE"
+        if [ "$RESPONSE" = "200" ]; then
+          echo "✅ Frontend is running"
+        else
+          echo "⚠️ Frontend returned: $RESPONSE"
+        fi
+        
+    - name: View logs on failure
+      if: failure()
+      run: |
+        echo "=== Backend Logs ==="
+        docker-compose logs backend
+        echo "=== Frontend Logs ==="
+        docker-compose logs frontend
+        echo "=== MongoDB Logs ==="
+        docker-compose logs mongodb
+        
+    - name: Cleanup
+      if: always()
+      run: |
+        docker-compose down -v

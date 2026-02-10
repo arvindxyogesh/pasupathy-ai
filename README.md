@@ -4,6 +4,8 @@
 ![Python](https://img.shields.io/badge/Python-3.11-blue?style=flat-square)
 ![React](https://img.shields.io/badge/React-18.2-61dafb?style=flat-square)
 ![Docker](https://img.shields.io/badge/Docker-Ready-2496ed?style=flat-square)
+![CI Pipeline](https://github.com/YOUR_USERNAME/pasupathy-ai/actions/workflows/ci.yml/badge.svg)
+![CD Pipeline](https://github.com/YOUR_USERNAME/pasupathy-ai/actions/workflows/cd.yml/badge.svg)
 
 **Pasupathy** is a sophisticated personal AI assistant powered by Retrieval-Augmented Generation (RAG) technology. Built using cutting-edge LLM capabilities and a futuristic ChatGPT-style interface, it provides intelligent, context-aware responses based on curated personal knowledge.
 
@@ -17,6 +19,7 @@ This project demonstrates expertise in full-stack AI development, cloud infrastr
 - **Browser-Only Privacy** - All chat sessions stored locally in browser localStorage, ensuring complete privacy
 - **Fast Performance** - FAISS index persistence loads in 5 seconds versus 60 minute rebuild
 - **Production-Ready Deployment** - Complete AWS infrastructure with Docker containerization
+- **CI/CD Pipeline** - Automated testing and deployment with GitHub Actions
 - **HTTPS Security** - CloudFront CDN configuration for secure HTTPS access on both frontend and backend
 
 ## Architecture Overview
