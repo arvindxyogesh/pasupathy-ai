@@ -9,7 +9,7 @@
 
 **Pasupathy** is a sophisticated personal AI assistant powered by Retrieval-Augmented Generation (RAG) technology. Built using cutting-edge LLM capabilities and a futuristic ChatGPT-style interface, it provides intelligent, context-aware responses based on curated personal knowledge.
 
-This project demonstrates expertise in full-stack AI development, cloud infrastructure, and modern web technologies.
+This project demonstrates expertise in full-stack AI development, cloud infrartructure, and modern web technologies.
 
 ## Key Features
 
