@@ -7,8 +7,5 @@ exclude =
     pasupathy,
     faiss_index,
     .pytest_cache
-ignore = 
-    E501,  # Line too long (handled by max-line-length)
-    W503,  # Line break before binary operator
-    E203,  # Whitespace before ':'
+ignore = E501,W503,E203
 max-complexity = 10
