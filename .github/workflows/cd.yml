@@ -50,29 +50,35 @@ jobs:
         
     - name: Deploy to Elastic Beanstalk
       if: steps.aws-creds.outcome == 'success'
+      continue-on-error: true
+      id: eb-deploy
       run: |
         eb init ${{ env.EB_APPLICATION_NAME }} --region ${{ env.AWS_REGION }} --platform docker
-        eb use ${{ env.EB_ENVIRONMENT_NAME }}
-        eb deploy --staged --label "v${{ steps.commit.outputs.sha_short }}" --message "${{ steps.commit.outputs.message }}"
-        
+        if ! eb use ${{ env.EB_ENVIRONMENT_NAME }} 2>/dev/null; then
+          echo "Environment not found. Skipping deployment."
+          echo "Create the EB environment first: eb create ${{ env.EB_ENVIRONMENT_NAME }}"
+          exit 1
+        fi
+        eb deploy --staged --timeout 10
+
     - name: Get deployment URL
-      if: steps.aws-creds.outcome == 'success'
+      if: steps.aws-creds.outcome == 'success' && steps.eb-deploy.outcome == 'success'
       id: get-url
       run: |
         URL=$(eb status | grep "CNAME" | awk '{print $2}')
         echo "url=http://$URL" >> $GITHUB_OUTPUT
-        
+
     - name: Health check
-      if: steps.aws-creds.outcome == 'success'
+      if: steps.aws-creds.outcome == 'success' && steps.eb-deploy.outcome == 'success'
       run: |
         sleep 30
         URL="${{ steps.get-url.outputs.url }}"
-        RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" $URL/api/health || echo "000")
+        RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" "$URL/api/health" || echo "000")
         if [ "$RESPONSE" = "200" ]; then
-          echo "✅ Deployment successful! Health check passed."
-          echo "🌐 URL: $URL"
+          echo "Deployment successful! Health check passed."
+          echo "URL: $URL"
         else
-          echo "⚠️ Health check returned: $RESPONSE"
+          echo "Health check returned: $RESPONSE"
           echo "Deployment may need time to warm up."
         fi
         
@@ -112,29 +118,29 @@ jobs:
         echo "date=$(date +%Y%m%d)" >> $GITHUB_OUTPUT
         
     - name: Build and push backend image
+      if: steps.docker-login.outcome == 'success'
       uses: docker/build-push-action@v5
       with:
         context: ./backend
         file: ./backend/Dockerfile
-        push: ${{ steps.docker-login.outcome == 'success' }}
+        push: true
         tags: |
           ${{ secrets.DOCKER_USERNAME }}/pasupathy-backend:latest
           ${{ secrets.DOCKER_USERNAME }}/pasupathy-backend:${{ steps.version.outputs.tag }}
           ${{ secrets.DOCKER_USERNAME }}/pasupathy-backend:${{ steps.version.outputs.date }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
-      continue-on-error: true
         
     - name: Build and push frontend image
+      if: steps.docker-login.outcome == 'success'
       uses: docker/build-push-action@v5
       with:
         context: ./frontend
         file: ./frontend/Dockerfile
-        push: ${{ steps.docker-login.outcome == 'success' }}
+        push: true
         tags: |
           ${{ secrets.DOCKER_USERNAME }}/pasupathy-frontend:latest
           ${{ secrets.DOCKER_USERNAME }}/pasupathy-frontend:${{ steps.version.outputs.tag }}
           ${{ secrets.DOCKER_USERNAME }}/pasupathy-frontend:${{ steps.version.outputs.date }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
-      continue-on-error: true

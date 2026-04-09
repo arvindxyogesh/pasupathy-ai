@@ -39,7 +39,6 @@ jobs:
       run: |
         cd backend
         pytest tests/ --cov=. --cov-report=xml --cov-report=term
-      continue-on-error: true
       
     - name: Health check test
       env:
