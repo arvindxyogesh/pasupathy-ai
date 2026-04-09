@@ -8,7 +8,7 @@ on:
 env:
   AWS_REGION: us-west-2
   EB_APPLICATION_NAME: pasupathy-ai
-  EB_ENVIRONMENT_NAME: pasupathy-ai-env
+  EB_ENVIRONMENT_NAME: pasupathy-backend
 
 jobs:
   deploy:
