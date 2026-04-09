@@ -59,7 +59,7 @@ jobs:
           echo "Create the EB environment first: eb create ${{ env.EB_ENVIRONMENT_NAME }}"
           exit 1
         fi
-        eb deploy --staged --timeout 10
+        eb deploy --staged --timeout 20
 
     - name: Get deployment URL
       if: steps.aws-creds.outcome == 'success' && steps.eb-deploy.outcome == 'success'
